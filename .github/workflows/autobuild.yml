@@ -1,0 +1,226 @@
+name: Auto Build & Release APK (Berkah Perdana ERP)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v5
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v4
+      with:
+        packages: "platform-tools platforms;android-34 build-tools;34.0.0"
+
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v3
+
+    - name: Create Android project
+      run: |
+        mkdir -p app/src/main/java/com/berkahperdana/erp
+        mkdir -p app/src/main/res/{layout,drawable,values,menu,mipmap-anydpi-v26}
+
+        # settings.gradle
+        cat > settings.gradle <<EOF
+        rootProject.name = 'Berkah Perdana ERP'
+        include ':app'
+        EOF
+
+        # build.gradle (project)
+        cat > build.gradle <<EOF
+        buildscript {
+            repositories { google(); mavenCentral() }
+            dependencies { classpath 'com.android.tools.build:gradle:8.5.0' }
+        }
+        allprojects { repositories { google(); mavenCentral() } }
+        EOF
+
+        # app/build.gradle
+        cat > app/build.gradle <<'EOF'
+        plugins {
+            id 'com.android.application'
+        }
+        android {
+            namespace 'com.berkahperdana.erp'
+            compileSdk 34
+            defaultConfig {
+                applicationId 'com.berkahperdana.erp'
+                minSdk 24
+                targetSdk 34
+                versionCode 1
+                versionName '1.0'
+            }
+            buildTypes { release { minifyEnabled false } }
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
+            }
+        }
+        dependencies {
+            implementation 'androidx.appcompat:appcompat:1.7.0'
+            implementation 'androidx.webkit:webkit:1.13.0'
+            implementation 'com.google.android.material:material:1.12.0'
+        }
+        EOF
+
+        # AndroidManifest.xml
+        cat > app/src/main/AndroidManifest.xml <<EOF
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.INTERNET"/>
+            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+            <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION"/>
+            <uses-permission android:name="android.permission.ACCESS_DOWNLOAD_MANAGER"/>
+            <application
+                android:label="Berkah Perdana ERP"
+                android:usesCleartextTraffic="true"
+                android:icon="@mipmap/ic_launcher"
+                android:roundIcon="@mipmap/ic_launcher"
+                android:theme="@style/Theme.BerkahERP">
+                <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="portrait">
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN"/>
+                        <category android:name="android.intent.category.LAUNCHER"/>
+                    </intent-filter>
+                </activity>
+            </application>
+        </manifest>
+        EOF
+
+        # themes.xml
+        cat > app/src/main/res/values/themes.xml <<'XML'
+        <resources>
+            <style name="Theme.BerkahERP" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+                <item name="colorPrimary">#4CAF50</item>
+                <item name="colorPrimaryVariant">#388E3C</item>
+                <item name="colorOnPrimary">#FFFFFF</item>
+            </style>
+        </resources>
+        XML
+
+        # splash screen
+        cat > app/src/main/res/layout/splash.xml <<'XML'
+        <?xml version="1.0" encoding="utf-8"?>
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/ic_launcher_background">
+            <TextView
+                android:text="Berkah Perdana\nEnterprise\n   erp"
+                android:textSize="24sp"
+                android:textColor="#FFFFFF"
+                android:gravity="center"/>
+        </LinearLayout>
+        XML
+
+        # vector icon
+        cat > app/src/main/res/drawable/ic_server.xml <<'XML'
+        <vector xmlns:android="http://schemas.android.com/apk/res/android"
+            android:width="108dp"
+            android:height="108dp"
+            android:viewportWidth="108"
+            android:viewportHeight="108">
+            <path android:fillColor="#4CAF50" android:pathData="M0,0h108v108h-108z"/>
+            <path android:fillColor="#FFFFFF" android:pathData="M36,36h36v36h-36z"/>
+        </vector>
+        XML
+
+        # adaptive icon
+        cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'XML'
+        <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+            <background android:drawable="@color/ic_launcher_background"/>
+            <foreground android:drawable="@drawable/ic_server"/>
+        </adaptive-icon>
+        XML
+
+        # menu resource with restart
+        cat > app/src/main/res/menu/bottom_nav_menu.xml <<'XML'
+        <?xml version="1.0" encoding="utf-8"?>
+        <menu xmlns:android="http://schemas.android.com/apk/res/android">
+            <item android:id="@+id/action_refresh" android:title="Refresh" android:icon="@android:drawable/ic_menu_rotate"/>
+            <item android:id="@+id/action_restart" android:title="Restart" android:icon="@android:drawable/ic_menu_revert"/>
+            <item android:id="@+id/action_exit" android:title="Exit" android:icon="@android:drawable/ic_menu_close_clear_cancel"/>
+        </menu>
+        XML
+
+        # layout with bottom navigation
+        cat > app/src/main/res/layout/activity_main.xml <<'XML'
+        <?xml version="1.0" encoding="utf-8"?>
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+            <WebView
+                android:id="@+id/webview"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+            <com.google.android.material.bottomnavigation.BottomNavigationView
+                android:id="@+id/bottom_nav"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:menu="@menu/bottom_nav_menu"/>
+        </LinearLayout>
+        XML
+
+        # MainActivity.java with restart
+        cat > app/src/main/java/com/berkahperdana/erp/MainActivity.java <<'JAVA'
+        package com.berkahperdana.erp;
+
+        import android.content.Intent;
+        import android.os.Bundle;
+        import android.webkit.WebSettings;
+        import android.webkit.WebView;
+        import android.webkit.WebViewClient;
+        import android.widget.Toast;
+        import androidx.annotation.NonNull;
+        import androidx.appcompat.app.AppCompatActivity;
+        import com.google.android.material.bottomnavigation.BottomNavigationView;
+        import android.view.MenuItem;
+
+        public class MainActivity extends AppCompatActivity {
+            private WebView webView;
+
+            @Override
+            protected void onCreate(Bundle savedInstanceState) {
+                super.onCreate(savedInstanceState);
+                setContentView(R.layout.activity_main);
+
+                webView = findViewById(R.id.webview);
+                WebSettings settings = webView.getSettings();
+                settings.setJavaScriptEnabled(true);
+                settings.setDomStorageEnabled(true);
+                settings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+                webView.setWebViewClient(new WebViewClient());
+                webView.loadUrl("https://server-enterprise.pages.dev");
+
+                BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
+                bottomNav.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
+                    @Override
+                    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                        int id = item.getItemId();
+                        if (id == R.id.action_refresh) {
+                            webView.reload();
+                            Toast.makeText(MainActivity.this, "Reloading...", Toast.LENGTH_SHORT).show();
+                            return true;
+                        } else if (id == R.id.action_restart) {
+                            Intent intent = getIntent();
+                            finish();
+                            startActivity(intent);
+                            Toast.makeText(MainActivity.this, "Restarting app...", Toast.LENGTH_SHORT).show();
+                            return true
