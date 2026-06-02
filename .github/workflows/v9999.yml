@@ -1,0 +1,90 @@
+name: Build APK (Old Stable)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        packages: "platform-tools platforms;android-34 build-tools;34.0.0"
+    - name: Build WebView APK
+      run: |
+        mkdir -p app/src/main/java/com/old/stable
+        cat > settings.gradle <<'EOF'
+        rootProject.name = 'OldStable'
+        include ':app'
+        EOF
+        cat > build.gradle <<'EOF'
+        buildscript {
+            repositories { google(); mavenCentral() }
+            dependencies { classpath 'com.android.tools.build:gradle:8.5.0' }
+        }
+        allprojects { repositories { google(); mavenCentral() } }
+        EOF
+        cat > app/build.gradle <<'EOF'
+        plugins { id 'com.android.application' }
+        android {
+            namespace 'com.old.stable'
+            compileSdk 34
+            defaultConfig {
+                applicationId 'com.old.stable'
+                minSdk 24
+                targetSdk 34
+                versionCode 1
+                versionName '1.0'
+            }
+            buildTypes { release { minifyEnabled false } }
+        }
+        dependencies { implementation 'androidx.appcompat:appcompat:1.6.1' }
+        EOF
+        cat > app/src/main/AndroidManifest.xml <<'MANIFEST'
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.INTERNET"/>
+            <application android:label="Old Stable">
+                <activity android:name=".MainActivity" android:exported="true">
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN"/>
+                        <category android:name="android.intent.category.LAUNCHER"/>
+                    </intent-filter>
+                </activity>
+            </application>
+        </manifest>
+        MANIFEST
+        cat > app/src/main/java/com/old/stable/MainActivity.java <<'JAVA'
+        package com.old.stable;
+        import android.os.Bundle;
+        import android.webkit.WebView;
+        import android.webkit.WebViewClient;
+        import androidx.appcompat.app.AppCompatActivity;
+        public class MainActivity extends AppCompatActivity {
+            @Override protected void onCreate(Bundle b) {
+                super.onCreate(b);
+                WebView wv = new WebView(this);
+                wv.setWebViewClient(new WebViewClient());
+                wv.getSettings().setJavaScriptEnabled(true);
+                wv.loadUrl("https://example.com");
+                setContentView(wv);
+            }
+        }
+        JAVA
+        echo "sdk.dir=$ANDROID_HOME" > local.properties
+        gradle wrapper --gradle-version 8.7
+        chmod +x gradlew
+        ./gradlew assembleRelease
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: old-stable-apk
+        path: app/build/outputs/apk/release/*.apk
