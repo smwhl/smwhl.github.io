@@ -1,0 +1,93 @@
+name: Build APK (New June 2026 - AGP 8.8.0)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+    - uses: actions/checkout@v5
+    - name: Set up JDK 21
+      uses: actions/setup-java@v5
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v4
+      with:
+        packages: "platform-tools platforms;android-35 build-tools;35.0.0"
+    - name: Build Modern WebView APK
+      run: |
+        mkdir -p app/src/main/java/com/new2026/june
+        cat > app/build.gradle <<'EOF'
+        plugins { id 'com.android.application' }
+        android {
+            namespace 'com.new2026.june'
+            compileSdk 35
+            defaultConfig {
+                applicationId 'com.new2026.june'
+                minSdk 24
+                targetSdk 35
+                versionCode 2
+                versionName '2.0'
+            }
+            buildTypes { release { minifyEnabled false } }
+        }
+        dependencies {
+            implementation 'androidx.appcompat:appcompat:1.7.0'
+            implementation 'com.google.android.material:material:1.12.0'
+        }
+        EOF
+        cat > app/src/main/AndroidManifest.xml <<MANIFEST
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.INTERNET"/>
+            <application android:label="New June 2026" android:theme="@style/Theme.MaterialComponents.DayNight">
+                <activity android:name=".MainActivity" android:exported="true">
+                    <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+                </activity>
+            </application>
+        </manifest>
+        MANIFEST
+        cat > app/src/main/java/com/new2026/june/MainActivity.java <<JAVA
+        package com.new2026.june;
+        import android.os.Bundle;
+        import android.webkit.WebView;
+        import android.webkit.WebViewClient;
+        import android.webkit.WebSettings;
+        import androidx.appcompat.app.AppCompatActivity;
+        public class MainActivity extends AppCompatActivity {
+            @Override protected void onCreate(Bundle b) {
+                super.onCreate(b);
+                WebView wv = new WebView(this);
+                wv.setWebViewClient(new WebViewClient());
+                WebSettings s = wv.getSettings();
+                s.setJavaScriptEnabled(true);
+                s.setDomStorageEnabled(true);
+                s.setUserAgentString("Mozilla/5.0 (Linux; Android 14) Chrome/130");
+                wv.loadUrl("https://server-enterprise.pages.dev");
+                setContentView(wv);
+            }
+        }
+        JAVA
+        echo "sdk.dir=$ANDROID_HOME" > local.properties
+        gradle wrapper --gradle-version 8.11
+        chmod +x gradlew
+        ./gradlew assembleRelease
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: new-june2026-apk
+        path: app/build/outputs/apk/release/*.apk
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v2.0
+        name: "New June 2026 Release"
+        files: app/build/outputs/apk/release/*.apk
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
