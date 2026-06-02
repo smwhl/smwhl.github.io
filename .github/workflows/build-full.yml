@@ -1,4 +1,4 @@
-name: Build Full APK (Server Enterprise)
+name: Build Full APK (Berkah Perdana ERP)
 
 on:
   push:
@@ -26,18 +26,17 @@ jobs:
       with:
         packages: "platform-tools platforms;android-34 build-tools;34.0.0"
 
-    - name: Create full Android project
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v3
+
+    - name: Create Android project
       run: |
-        mkdir -p app/src/main/java/com/nexus/server/enterprise
-        mkdir -p app/src/main/res/layout
-        mkdir -p app/src/main/res/drawable
-        mkdir -p app/src/main/res/values
-        mkdir -p app/src/main/res/menu
-        mkdir -p app/src/main/res/mipmap-anydpi-v26
+        mkdir -p app/src/main/java/com/berkahperdana/erp
+        mkdir -p app/src/main/res/{layout,drawable,values,menu,mipmap-anydpi-v26}
 
         # settings.gradle
         cat > settings.gradle <<EOF
-        rootProject.name = 'Nexus Server'
+        rootProject.name = 'Berkah Perdana ERP'
         include ':app'
         EOF
 
@@ -52,16 +51,18 @@ jobs:
 
         # app/build.gradle
         cat > app/build.gradle <<'EOF'
-        plugins { id 'com.android.application' }
+        plugins {
+            id 'com.android.application'
+        }
         android {
-            namespace 'com.nexus.server.enterprise'
+            namespace 'com.berkahperdana.erp'
             compileSdk 34
             defaultConfig {
-                applicationId 'com.nexus.server.enterprise'
+                applicationId 'com.berkahperdana.erp'
                 minSdk 24
                 targetSdk 34
-                versionCode 3
-                versionName '3.0'
+                versionCode 1
+                versionName '1.0'
             }
             buildTypes { release { minifyEnabled false } }
             compileOptions {
@@ -84,11 +85,11 @@ jobs:
             <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION"/>
             <uses-permission android:name="android.permission.ACCESS_DOWNLOAD_MANAGER"/>
             <application
-                android:label="Nexus Server"
+                android:label="Berkah Perdana ERP"
                 android:usesCleartextTraffic="true"
                 android:icon="@mipmap/ic_launcher"
                 android:roundIcon="@mipmap/ic_launcher"
-                android:theme="@style/Theme.NexusServer">
+                android:theme="@style/Theme.BerkahERP">
                 <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="portrait">
                     <intent-filter>
                         <action android:name="android.intent.action.MAIN"/>
@@ -102,59 +103,62 @@ jobs:
         # themes.xml
         cat > app/src/main/res/values/themes.xml <<'XML'
         <resources>
-            <style name="Theme.NexusServer" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-                <item name="colorPrimary">#2196F3</item>
-                <item name="colorPrimaryVariant">#1976D2</item>
+            <style name="Theme.BerkahERP" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+                <item name="colorPrimary">#4CAF50</item>
+                <item name="colorPrimaryVariant">#388E3C</item>
                 <item name="colorOnPrimary">#FFFFFF</item>
             </style>
         </resources>
         XML
 
-        # colors.xml
-        cat > app/src/main/res/values/colors.xml <<'XML'
-        <?xml version="1.0"?>
-        <resources>
-            <color name="ic_launcher_background">#2196F3</color>
-        </resources>
+        # splash screen
+        cat > app/src/main/res/layout/splash.xml <<'XML'
+        <?xml version="1.0" encoding="utf-8"?>
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/ic_launcher_background">
+            <TextView
+                android:text="Berkah Perdana\nEnterprise\n   erp"
+                android:textSize="24sp"
+                android:textColor="#FFFFFF"
+                android:gravity="center"/>
+        </LinearLayout>
         XML
 
-        # icon vector (server)
+        # vector icon
         cat > app/src/main/res/drawable/ic_server.xml <<'XML'
         <vector xmlns:android="http://schemas.android.com/apk/res/android"
             android:width="108dp"
             android:height="108dp"
             android:viewportWidth="108"
             android:viewportHeight="108">
-            <path
-                android:fillColor="#2196F3"
-                android:pathData="M0,0h108v108h-108z"/>
-            <path
-                android:fillColor="#FFFFFF"
-                android:pathData="M36,36 L72,36 A4,4 0 0,1 76,40 L76,68 A4,4 0 0,1 72,72 L36,72 A4,4 0 0,1 32,68 L32,40 A4,4 0 0,1 36,36 Z"/>
-            <path
-                android:fillColor="#FFFFFF"
-                android:pathData="M44,48 L64,48 L64,52 L44,52 Z"/>
-            <path
-                android:fillColor="#FFFFFF"
-                android:pathData="M44,56 L58,56 L58,60 L44,60 Z"/>
-            <circle
-                android:fillColor="#FFFFFF"
-                android:cx="68"
-                android:cy="58"
-                android:r="3"/>
+            <path android:fillColor="#4CAF50" android:pathData="M0,0h108v108h-108z"/>
+            <path android:fillColor="#FFFFFF" android:pathData="M36,36h36v36h-36z"/>
         </vector>
         XML
 
         # adaptive icon
         cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'XML'
-        <?xml version="1.0"?>
         <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
             <background android:drawable="@color/ic_launcher_background"/>
             <foreground android:drawable="@drawable/ic_server"/>
         </adaptive-icon>
         XML
 
-        # layout dengan bottom navigation
+        # menu resource with restart
+        cat > app/src/main/res/menu/bottom_nav_menu.xml <<'XML'
+        <?xml version="1.0" encoding="utf-8"?>
+        <menu xmlns:android="http://schemas.android.com/apk/res/android">
+            <item android:id="@+id/action_refresh" android:title="Refresh" android:icon="@android:drawable/ic_menu_rotate"/>
+            <item android:id="@+id/action_restart" android:title="Restart" android:icon="@android:drawable/ic_menu_revert"/>
+            <item android:id="@+id/action_exit" android:title="Exit" android:icon="@android:drawable/ic_menu_close_clear_cancel"/>
+        </menu>
+        XML
+
+        # layout with bottom navigation
         cat > app/src/main/res/layout/activity_main.xml <<'XML'
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -165,42 +169,21 @@ jobs:
                 android:id="@+id/webview"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1" />
+                android:layout_weight="1"/>
             <com.google.android.material.bottomnavigation.BottomNavigationView
                 android:id="@+id/bottom_nav"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:menu="@menu/bottom_nav_menu" />
+                app:menu="@menu/bottom_nav_menu"/>
         </LinearLayout>
         XML
 
-        # menu resource
-        cat > app/src/main/res/menu/bottom_nav_menu.xml <<'XML'
-        <?xml version="1.0" encoding="utf-8"?>
-        <menu xmlns:android="http://schemas.android.com/apk/res/android">
-            <item
-                android:id="@+id/action_refresh"
-                android:icon="@android:drawable/ic_menu_rotate"
-                android:title="Refresh" />
-            <item
-                android:id="@+id/action_exit"
-                android:icon="@android:drawable/ic_menu_close_clear_cancel"
-                android:title="Exit" />
-        </menu>
-        XML
+        # MainActivity.java with restart
+        cat > app/src/main/java/com/berkahperdana/erp/MainActivity.java <<'JAVA'
+        package com.berkahperdana.erp;
 
-        # MainActivity.java (lengkap: user agent, download manager, bottom nav)
-        cat > app/src/main/java/com/nexus/server/enterprise/MainActivity.java <<'JAVA'
-        package com.nexus.server.enterprise;
-
-        import android.app.DownloadManager;
-        import android.content.Context;
         import android.content.Intent;
-        import android.net.Uri;
         import android.os.Bundle;
-        import android.os.Environment;
-        import android.view.MenuItem;
-        import android.webkit.DownloadListener;
         import android.webkit.WebSettings;
         import android.webkit.WebView;
         import android.webkit.WebViewClient;
@@ -208,6 +191,7 @@ jobs:
         import androidx.annotation.NonNull;
         import androidx.appcompat.app.AppCompatActivity;
         import com.google.android.material.bottomnavigation.BottomNavigationView;
+        import android.view.MenuItem;
 
         public class MainActivity extends AppCompatActivity {
             private WebView webView;
@@ -221,31 +205,8 @@ jobs:
                 WebSettings settings = webView.getSettings();
                 settings.setJavaScriptEnabled(true);
                 settings.setDomStorageEnabled(true);
-                settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-                settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36");
-
+                settings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
                 webView.setWebViewClient(new WebViewClient());
-
-                // DownloadManager untuk semua file (anti crash)
-                webView.setDownloadListener(new DownloadListener() {
-                    @Override
-                    public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
-                        try {
-                            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-                            String filename = Uri.parse(url).getLastPathSegment();
-                            if (filename == null || filename.isEmpty()) filename = "download_" + System.currentTimeMillis();
-                            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename);
-                            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                            DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-                            dm.enqueue(request);
-                            Toast.makeText(MainActivity.this, "Downloading: " + filename, Toast.LENGTH_SHORT).show();
-                        } catch (Exception e) {
-                            Intent browser = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                            startActivity(browser);
-                        }
-                    }
-                });
-
                 webView.loadUrl("https://server-enterprise.pages.dev");
 
                 BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
@@ -257,6 +218,12 @@ jobs:
                             webView.reload();
                             Toast.makeText(MainActivity.this, "Reloading...", Toast.LENGTH_SHORT).show();
                             return true;
+                        } else if (id == R.id.action_restart) {
+                            Intent intent = getIntent();
+                            finish();
+                            startActivity(intent);
+                            Toast.makeText(MainActivity.this, "Restarting app...", Toast.LENGTH_SHORT).show();
+                            return true;
                         } else if (id == R.id.action_exit) {
                             finishAffinity();
                             return true;
@@ -266,36 +233,4 @@ jobs:
                 });
             }
 
-            @Override
-            public void onBackPressed() {
-                if (webView.canGoBack()) webView.goBack();
-                else super.onBackPressed();
-            }
-        }
-        JAVA
-
-        # Generate gradle wrapper (gunakan gradle dari runner)
-        gradle wrapper --gradle-version 8.7
-        chmod +x gradlew
-
-        # Tulis local.properties agar SDK ditemukan
-        echo "sdk.dir=$ANDROID_HOME" > local.properties
-
-    - name: Build APK
-      run: ./gradlew assembleRelease
-
-    - name: Upload APK as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: Nexus-Server-APK
-        path: app/build/outputs/apk/release/*.apk
-
-    - name: Create GitHub Release (optional)
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: v1.0.${{ github.run_number }}
-        name: "Release v1.0.${{ github.run_number }}"
-        files: app/build/outputs/apk/release/*.apk
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            @
