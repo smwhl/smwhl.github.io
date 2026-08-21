@@ -1,0 +1,15 @@
+# Security
+token.txt
+*.txt
+*.log
+
+# Android
+*.apk
+*.aab
+.gradle/
+build/
+app/build/
+local.properties
+*.iml
+.idea/
+.DS_Store
